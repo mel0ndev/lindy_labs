@@ -1,7 +1,7 @@
 const Web3 = require('web3'); 
 const web3 = new Web3('http://127.0.0.1:8545');
 
-const test_address = "0x8c3E4D548B93B478656EB2ec584b695E09Ec6945"; 
+const test_address = "0x2C25606A8423C7B82b5bec3d04CF12f6774c2468"; 
 const test_abi = require("../build/contracts/RockPaperScissors.json").abi;
 
 
@@ -30,10 +30,7 @@ async function run() {
 
 	console.log('----- Both players have deposited -----');
 
-	await test.methods.withdraw().send({from: player1, gas: max_gas}); 
-	await test.methods.withdraw().send({from: player2, gas: max_gas}); 
-
-	await test.methods.start_game(player2, "rock", 777, 0).send({from: player1, gas: max_gas}); 
+	await test.methods.start_game(player2, "0xd0feaf36a077d2e243c02bf8b2dd1dae2ec92c0a2057df862524ea3596c7ac43" ,0).send({from: player1, gas: max_gas}); 
 
 	const game_id = await test.methods.global_id().call();
 	console.log(`global count is ${game_id}`); 

@@ -8,32 +8,12 @@ pragma experimental ABIEncoderV2;
 
 contract RockPaperScissors {
 
-    //contract should keep track of infinite # of games //DONE
-
-    //each have a unique ID - mapping -> game uint to struct //DONE 
-
-    //once each player has gone, the game will resolve and no more moves can be played 
-
-    //48 hr limit per turn //DONE 
-
-    //to play, both players have to send eth to the contract //DONE 
-
-    //it should be impossible for one player to see what the other has done --> store player1 move as hash + secret_key //DONE
-
-    //when a game finishes, winner takes all //DONE 
-
-    //if draw then each player can only withdraw 50% of their deposit amount 
-    //the remaining 50% gets added to the next pot //DONE
-
-    //should contain unit testing (gross) --> fuzzing, mutation, etc (???) //GROSS 
-
-    //rock = 1; paper = 2; scissors = 3; 
     struct Game {
         uint local_id; //stores each game locally so mulitple can be played at once
         bool is_active;
 		bool accepted; //lets player1 know that player2 has moved  
         address player1;
-        uint player1_move; //a hashed secret move (stored as a uint)  
+        bytes32 player1_move; //a hashed secret move
         address player2;
         string player2_move; //not hashed, no need since the game resolves after player2 moves  uint pot; //the size of the pot
         uint timer; //timer is stores locally as well  
@@ -75,7 +55,8 @@ contract RockPaperScissors {
 	}
 
 	//the player you're challenging, your move, a secret key, and rollover game id from a previous game, if any 
-    function start_game(address player2, string memory move, uint64 secret_key, uint rollover_id) external {
+	//submit the hashed move as keccak256(abi.encodePacked("your move", secret_number_key)); 
+    function start_game(address player2, bytes32 hashed_move, uint rollover_id) external {
         //increment global game count  
         global_id++;
 
@@ -95,7 +76,7 @@ contract RockPaperScissors {
 		
 
         //assign the move to the game id 
-        store_move(global_id, move, secret_key);
+		games[global_id].player1_move = hashed_move; 
 
         //start timer after we check if ether sent, if challenged player does not accept then we send the ether back to the player 
         games[global_id].timer = block.timestamp;
@@ -107,7 +88,7 @@ contract RockPaperScissors {
         require(msg.sender != games[game_id].player1, "can't play against yourself dummy"); 
 		require(msg.sender == games[game_id].player2, "not the correct player2"); 
 
-        uint time_remaining = check_timer(game_id); //check to see that the timer is not over the 48 hour mark  
+        check_timer(game_id); //check to see that the timer is not over the 48 hour mark  
         require(games[game_id].is_active == true, "game is no longer active");
 		
 		//player 2's move does not need to be secret since they are going second 
@@ -121,7 +102,7 @@ contract RockPaperScissors {
 		require(games[game_id].accepted == true);	
 		require(msg.sender == games[game_id].player1, "only player 1 can reveal the outcome"); 
 		require( 
-				uint(keccak256(abi.encodePacked(move, secret_key))) == games[game_id].player1_move,
+				keccak256(abi.encodePacked(move, secret_key)) == games[game_id].player1_move,
 				"reveal not equal to commit"
 			   ); 
 
@@ -175,11 +156,6 @@ contract RockPaperScissors {
 				in_game[player1] = false; 
 				in_game[player2] = false; 
 	}
-
-    function store_move(uint game_id, string memory move, uint64 secret_key) internal {
-        //we store the move + a random uint as a keccak256 to avoid the move being able to be seen 
-        games[game_id].player1_move = uint(keccak256(abi.encodePacked(move, secret_key)));
-    }
 
     //update struct in another func 
     function update_game(uint game_id,
